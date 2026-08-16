@@ -177,6 +177,21 @@ class GraphStats:
     last_updated: Optional[str]
 
 
+@dataclass(frozen=True)
+class CommitMetadata:
+    """In-memory projection of a row in the ``commits`` table.
+
+    Mirrors the columns of the ``commits`` migration v10 schema and is what
+    :meth:`GraphStore.commits_for_file` returns. Frozen so callers cannot
+    accidentally mutate what came out of the database.
+    """
+    hash: str
+    author: str
+    date: str
+    message: Optional[str]
+    branch: Optional[str]
+
+
 # ---------------------------------------------------------------------------
 # GraphStore
 # ---------------------------------------------------------------------------
@@ -2197,6 +2212,75 @@ class GraphStore:
             confidence=confidence,
             confidence_tier=confidence_tier,
         )
+
+    # --- Commit-intent ingest (migration v10) -------------------------------
+    #
+    # These methods back the commit-intent ingest feature. They operate on the
+    # ``commits`` and ``commit_modifies_file`` tables created by migration v10
+    # (see ``code_review_graph/migrations.py``). ``file_path`` has no FK to a
+    # ``files`` table — the CRG schema does not have one — so
+    # ``link_commit_to_file`` does not require any pre-existing file row.
+
+    def add_commit_node(
+        self,
+        hash: str,
+        author: str,
+        date: str,
+        message: Optional[str],
+        branch: Optional[str],
+    ) -> None:
+        """Insert a commit row. Idempotent on ``hash`` (PRIMARY KEY)."""
+        self._conn.execute(
+            "INSERT OR IGNORE INTO commits (hash, author, date, message, branch) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (hash, author, date, message, branch),
+        )
+
+    def link_commit_to_file(self, commit_hash: str, file_path: str) -> None:
+        """Record that ``commit_hash`` modified ``file_path``. Idempotent."""
+        self._conn.execute(
+            "INSERT OR IGNORE INTO commit_modifies_file (commit_hash, file_path) "
+            "VALUES (?, ?)",
+            (commit_hash, file_path),
+        )
+
+    def commits_for_file(self, file_path: str) -> list[CommitMetadata]:
+        """Return every commit that modified ``file_path``, most recent first.
+
+        Joins ``commits`` and ``commit_modifies_file`` and orders by
+        ``commits.date DESC`` (matches ``git log <file>`` default).
+        """
+        rows = self._conn.execute(
+            "SELECT c.hash, c.author, c.date, c.message, c.branch "
+            "FROM commits c "
+            "JOIN commit_modifies_file cmf ON c.hash = cmf.commit_hash "
+            "WHERE cmf.file_path = ? "
+            "ORDER BY c.date DESC",
+            (file_path,),
+        ).fetchall()
+        return [
+            CommitMetadata(
+                hash=r[0],
+                author=r[1],
+                date=r[2],
+                message=r[3],
+                branch=r[4],
+            )
+            for r in rows
+        ]
+
+    def files_for_commit(self, commit_hash: str) -> list[str]:
+        """Return every file path that ``commit_hash`` modified."""
+        rows = self._conn.execute(
+            "SELECT file_path FROM commit_modifies_file WHERE commit_hash = ?",
+            (commit_hash,),
+        ).fetchall()
+        return [r[0] for r in rows]
+
+    def commit_count(self) -> int:
+        """Total number of commit rows currently stored."""
+        row = self._conn.execute("SELECT COUNT(*) FROM commits").fetchone()
+        return int(row[0]) if row else 0
 
 
 def _sanitize_name(s: str, max_len: int = 256) -> str:
