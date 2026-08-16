@@ -1,4 +1,4 @@
-"""Tests for GraphStore commit-intent ingest interface (Task 2 + Task 3).
+"""Tests for GraphStore commit-intent ingest interface (Task 2 + Task 3 + Task 4).
 
 These tests exercise:
 * Task 2 — commit node CRUD + reverse/forward queries that ``GraphStore``
@@ -6,12 +6,18 @@ These tests exercise:
   by migration v10.
 * Task 3 — ``commit_ingest`` parser + ``ingest_commits`` end-to-end ingest
   against a real (tempdir) git repo.
+* Task 4 — ``full_build()`` triggers ``ingest_commits`` so commit nodes
+  appear in the graph after a regular build runs.
 
 Notes for implementer (vs. brief):
 * ``GraphStore._conn`` is an attribute (sqlite3.Connection), not a callable.
 * ``link_commit_to_file`` does NOT require a row in any ``files`` table —
   migration v10 dropped the phantom FK to ``files(path)``. The tests only
   insert into ``commit_modifies_file`` (directly or via the method).
+* The public entry points in ``code_review_graph.incremental`` are the
+  module-level functions ``full_build(repo_root, store)`` and
+  ``incremental_update(repo_root, store, ...)`` — there is no
+  ``IncrementalUpdater`` class.
 """
 
 from __future__ import annotations
@@ -187,3 +193,40 @@ def test_ingest_commits_is_idempotent(tmp_path: Path) -> None:
     assert n1 == 1
     assert n2 == 0  # dedupe — second run no new commits
     assert store.commit_count() == 1
+
+
+# ---------------------------------------------------------------------------
+# Task 4 — full_build() triggers ingest_commits
+# ---------------------------------------------------------------------------
+
+
+def test_full_build_triggers_commit_ingest(tmp_path: Path) -> None:
+    """Run code-review-graph full_build end-to-end on a tiny git repo.
+
+    After ``full_build`` completes the commit-intent ingest must have run:
+    at least one Commit node should be present in the graph (the single
+    ``git commit`` we made above).
+    """
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    subprocess.run(["git", "init", "-q"], cwd=repo, check=True)
+    subprocess.run(
+        ["git", "config", "user.email", "t@e.com"], cwd=repo, check=True
+    )
+    subprocess.run(["git", "config", "user.name", "T"], cwd=repo, check=True)
+    (repo / "hello.py").write_text("def hi(): return 1\n")
+    subprocess.run(["git", "add", "hello.py"], cwd=repo, check=True)
+    subprocess.run(["git", "commit", "-q", "-m", "add hello"], cwd=repo, check=True)
+
+    # Use a real CRG DB path resolution so the file-graph write path works
+    # the same way it does in production.
+    from code_review_graph.incremental import full_build
+
+    db = repo / ".code-review-graph" / "graph.db"
+    store = GraphStore(db)
+    try:
+        result = full_build(repo, store)
+        assert result["files_parsed"] >= 1
+        assert store.commit_count() >= 1
+    finally:
+        store.close()

@@ -1142,6 +1142,15 @@ def full_build(
     hcl_stats = _run_hcl_resolver(store)
     scoped_stats = _run_scoped_resolver(store)
 
+    # Ingest git commits as the final step — adds Commit nodes + modify-file
+    # edges onto the freshly built file graph. Best-effort: a non-git repo
+    # (e.g. plain directory or SVN WC) must not break a successful build.
+    try:
+        from .commit_ingest import ingest_commits
+        ingest_commits(store, repo_root, branch="HEAD")
+    except Exception as exc:  # noqa: BLE001 - best-effort last step
+        logger.warning("commit ingest failed: %s", exc)
+
     return {
         "files_parsed": len(files),
         "stale_files_removed": len(stale_files),
@@ -1335,6 +1344,15 @@ def incremental_update(
     hcl_stats = _run_hcl_resolver(store) if hcl_changed else None
     scoped_changed = any(rp.endswith((".php", ".rs", ".cs")) for rp in all_files)
     scoped_stats = _run_scoped_resolver(store) if scoped_changed else None
+
+    # Ingest git commits as the final step — adds Commit nodes + modify-file
+    # edges. Best-effort: a non-git repo (e.g. plain directory or SVN WC)
+    # must not break a successful update.
+    try:
+        from .commit_ingest import ingest_commits
+        ingest_commits(store, repo_root, branch="HEAD")
+    except Exception as exc:  # noqa: BLE001 - best-effort last step
+        logger.warning("commit ingest failed: %s", exc)
 
     return {
         "files_updated": files_updated,
