@@ -1,5 +1,32 @@
 # Features
 
+## Commit-intent ingest
+
+Each `git log` commit reachable from the current branch HEAD is ingested as a
+`Commit` node with metadata `{hash, author, date, message, branch}` and edges
+to the files it modifies. This lets reviewers ask the graph "why was this
+file written this way?" and get a commit-by-commit trail back.
+
+### When commits are ingested
+
+- Automatically: every `code-review-graph build` and `code-review-graph update`
+- Manually: `code-review-graph ingest-commits --branch HEAD --repo-root <path>`
+
+### Reverse query example
+
+```python
+from code_review_graph.graph import GraphStore
+
+store = GraphStore(".code-review-graph/graph.db")
+for c in store.commits_for_file("code_review_graph/graph.py"):
+    print(c.hash, c.date, c.message)
+```
+
+The first-parent linear history is followed (merge branch commits are not
+included). Commit messages are capped at 2000 characters. `commits_for_file`
+returns a `list[CommitMetadata]` ordered by `date DESC`, matching
+`git log <file>` default order.
+
 ## v2.3.6 (Current)
 - **Framework-aware PHP parsing**: traits, enums, object creation, and base clauses are indexed; Composer PSR-4 resolution is longest-prefix, multi-directory, cached, and repository-bounded; Blade references ignore comments/escaped directives; Laravel Route and Eloquent edges require explicit framework/import/receiver evidence.
 - **Custom languages without forking**: drop a `.code-review-graph/languages.toml` into your repo to index any grammar shipped by tree-sitter-language-pack — extension map plus node-type lists, validated and capped, with built-in languages always winning. See [CUSTOM_LANGUAGES.md](CUSTOM_LANGUAGES.md).
