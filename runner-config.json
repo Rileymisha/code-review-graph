@@ -1,0 +1,9 @@
+{
+  "targets": {
+    "test":       { "description": "Run pytest",          "cmd": "pytest -q" },
+    "lint":       { "description": "Ruff check",          "cmd": "ruff check ." },
+    "format":     { "description": "Ruff format --check", "cmd": "ruff format --check ." },
+    "type-check": { "description": "mypy",                "cmd": "mypy code_review_graph" },
+    "build":      { "description": "hatch build",         "cmd": "hatch build" }
+  }
+}
