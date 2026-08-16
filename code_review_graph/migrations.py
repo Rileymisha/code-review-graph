@@ -275,6 +275,16 @@ def _migrate_v10(conn: sqlite3.Connection) -> None:
 # Migration registry
 # ---------------------------------------------------------------------------
 
+# Note on FOREIGN KEY declarations in migrations below:
+# ``REFERENCES ... ON DELETE CASCADE`` and similar FK clauses are
+# **documentation only**. ``GraphStore.__init__`` does not enable
+# ``PRAGMA foreign_keys = ON`` (it stays OFF project-wide), so SQLite
+# parses but never enforces these constraints. Keeping the FK syntax
+# preserves type intent (the column *should* reference that parent)
+# without misleading readers into expecting cascade behavior at
+# runtime. See ``graph.py:GraphStore.__init__`` for the PRAGMA list.
+
+
 CURRENT_VERSION = 10
 
 MIGRATIONS: dict[int, Callable[[sqlite3.Connection], None]] = {

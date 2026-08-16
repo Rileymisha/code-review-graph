@@ -43,6 +43,7 @@ import fnmatch
 import json
 import logging
 import os
+import subprocess
 from functools import partial
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as pkg_version
@@ -1903,7 +1904,11 @@ def main() -> None:
         elif args.command == "ingest-commits":
             from .commit_ingest import ingest_commits
 
-            n = ingest_commits(store, repo_root, branch=args.branch)
+            try:
+                n = ingest_commits(store, repo_root, branch=args.branch)
+            except (subprocess.CalledProcessError, FileNotFoundError) as exc:
+                logging.error("commit ingest failed: %s", exc)
+                sys.exit(1)
             print(f"Ingested {n} commit(s) from {args.branch}")
 
         elif args.command == "watch":

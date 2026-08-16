@@ -315,4 +315,11 @@ def test_cli_status_shows_commit_count(tmp_path: Path, capsys) -> None:
         cli.main()
 
     out = capsys.readouterr().out
-    assert "Commits: 1" in out, out
+    # Parse "Commits: N" instead of substring matching, so reformatting the
+    # label (e.g. "Commits (total): 1") doesn't silently break the test.
+    commits_line = next(
+        (line for line in out.splitlines() if line.strip().startswith("Commits:")), ""
+    )
+    assert commits_line, out
+    n = int(commits_line.split(":", 1)[1].strip())
+    assert n == 1, out
