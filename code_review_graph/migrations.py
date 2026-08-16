@@ -241,10 +241,9 @@ def _migrate_v9(conn: sqlite3.Connection) -> None:
 def _migrate_v10(conn: sqlite3.Connection) -> None:
     """v10: Create ``commits`` + ``commit_modifies_file`` tables for commit-intent ingest.
 
-    Additive and idempotent. SQLite accepts FK declarations in CREATE TABLE
-    even when the referenced table is absent (FK enforcement is a per-
-    connection PRAGMA); the ``files(path)`` reference is therefore safe to
-    declare here even though no such table exists yet in the v1-v9 schema.
+    Additive and idempotent. ``file_path`` is stored as a plain TEXT column with
+    no FK: the CRG schema has no ``files`` table (see ``_KNOWN_TABLES``), so a
+    ``REFERENCES files(path)`` declaration would be unenforced and confusing.
     """
     conn.execute("""
         CREATE TABLE IF NOT EXISTS commits (
@@ -259,7 +258,7 @@ def _migrate_v10(conn: sqlite3.Connection) -> None:
     conn.execute("""
         CREATE TABLE IF NOT EXISTS commit_modifies_file (
             commit_hash TEXT NOT NULL REFERENCES commits(hash) ON DELETE CASCADE,
-            file_path TEXT NOT NULL REFERENCES files(path) ON DELETE CASCADE,
+            file_path TEXT NOT NULL,
             PRIMARY KEY (commit_hash, file_path)
         )
     """)
