@@ -238,9 +238,45 @@ def _migrate_v9(conn: sqlite3.Connection) -> None:
     logger.info("Migration v9: added edge confidence columns")
 
 
+def _migrate_v10(conn: sqlite3.Connection) -> None:
+    """v10: Create ``commits`` + ``commit_modifies_file`` tables for commit-intent ingest.
+
+    Additive and idempotent. SQLite accepts FK declarations in CREATE TABLE
+    even when the referenced table is absent (FK enforcement is a per-
+    connection PRAGMA); the ``files(path)`` reference is therefore safe to
+    declare here even though no such table exists yet in the v1-v9 schema.
+    """
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS commits (
+            hash TEXT PRIMARY KEY,
+            author TEXT NOT NULL,
+            date TEXT NOT NULL,
+            message TEXT,
+            branch TEXT,
+            ingested_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS commit_modifies_file (
+            commit_hash TEXT NOT NULL REFERENCES commits(hash) ON DELETE CASCADE,
+            file_path TEXT NOT NULL REFERENCES files(path) ON DELETE CASCADE,
+            PRIMARY KEY (commit_hash, file_path)
+        )
+    """)
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_commit_modifies_file_path "
+        "ON commit_modifies_file(file_path)"
+    )
+    logger.info(
+        "Migration v10: created commits + commit_modifies_file tables"
+    )
+
+
 # ---------------------------------------------------------------------------
 # Migration registry
 # ---------------------------------------------------------------------------
+
+CURRENT_VERSION = 10
 
 MIGRATIONS: dict[int, Callable[[sqlite3.Connection], None]] = {
     2: _migrate_v2,
@@ -251,6 +287,7 @@ MIGRATIONS: dict[int, Callable[[sqlite3.Connection], None]] = {
     7: _migrate_v7,
     8: _migrate_v8,
     9: _migrate_v9,
+    10: _migrate_v10,
 }
 
 LATEST_VERSION = max(MIGRATIONS.keys())
