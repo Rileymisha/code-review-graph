@@ -5,7 +5,7 @@
       "args": ["code-review-graph", "serve"]
     },
     "runner-mcp": {
-      "command": "/home/riley/workspace/code-review-graph/runner-mcp/.venv/bin/python",
+      "command": "./.venv/bin/python",
       "args": ["-m", "runner_mcp"],
       "cwd": "/home/riley/workspace/code-review-graph/runner-mcp",
       "env": {

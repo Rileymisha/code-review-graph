@@ -93,7 +93,7 @@ async def run(cmd: str, cwd: Path, *, timeout_s: int, log_dir: Path = LOG_DIR) -
         )
 
     return RunResult(
-        exit_code=proc.returncode if proc.returncode is not None else -1,
+        exit_code=proc.returncode,
         duration_ms=duration_ms,
         stdout=truncated_stdout,
         stderr=truncated_stderr,

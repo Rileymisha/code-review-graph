@@ -17,16 +17,13 @@ import os
 import sys
 from pathlib import Path
 
-# Ensure src/ is importable when run from the repo root or scripts/.
-_HERE = Path(__file__).resolve().parent
-_REPO = _HERE.parent
-_SRC = _REPO / "src"
-if str(_SRC) not in sys.path:
-    sys.path.insert(0, str(_SRC))
+# NOTE: src/ must be importable. Invoke this script with
+#   PYTHONPATH=/home/riley/workspace/code-review-graph/runner-mcp/src \
+# as documented in runner-mcp/README.md — no sys.path mutation here.
 
-from fastmcp import Client  # noqa: E402
+from fastmcp import Client
 
-from runner_mcp.server import mcp  # noqa: E402
+from runner_mcp.server import mcp
 
 
 EXPECTED_TARGETS = {"test", "lint", "format", "type-check", "build"}

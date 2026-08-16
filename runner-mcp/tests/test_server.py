@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import shutil
 from pathlib import Path
 
@@ -19,7 +20,6 @@ async def _call(tool: str, args: dict, project_env: dict) -> tuple[bool, dict]:
     """Invoke a tool via in-process FastMCP client. Return (isError, parsed_json_text)."""
     env = project_env
     # server.py reads CRG_PROJECT_ROOT from os.environ at call time.
-    import os
     for k, v in env.items():
         os.environ[k] = v
     client = Client(mcp)
@@ -59,13 +59,20 @@ async def test_run_command_nonzero_iserror(project_env):
         "run_command", {"cmd": "bash -c 'exit 9'"}, project_env,
     )
     assert is_err is True
+    # The raw text must carry the structured exit_code=9 payload so LLM
+    # agents can parse it consistently. Prefix is "ERROR: " per server._err_with_payload.
+    assert "ERROR:" in payload["raw"]
+    assert "exit_code=9" in payload["raw"]
+    parsed = json.loads(payload["raw"].split("\n", 1)[1])
+    assert parsed["exit_code"] == 9
 
 
 async def test_run_command_timeout_iserror(project_env):
-    is_err, _ = await _call(
+    is_err, payload = await _call(
         "run_command", {"cmd": "sleep 10", "timeout_s": 1}, project_env,
     )
     assert is_err is True
+    assert "timed out" in payload["raw"].lower()
 
 
 async def test_run_command_uses_project_root_as_default_cwd(project_env, project_root):

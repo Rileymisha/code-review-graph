@@ -36,10 +36,14 @@ def _err(message: str) -> ToolResult:
     return ToolResult(content=f"ERROR: {message}", is_error=True)
 
 
-def _err_with_payload(prefix: str, payload: dict) -> ToolResult:
-    """Diagnostic error result carrying a JSON payload, is_error=True."""
+def _err_with_payload(message: str, payload: dict) -> ToolResult:
+    """Diagnostic error result carrying a JSON payload, is_error=True.
+
+    Text format: "ERROR: <message>\\n<json>" so both error paths share
+    the same `ERROR:` prefix for consistent LLM-agent parsing.
+    """
     text = json.dumps(payload, ensure_ascii=False)
-    return ToolResult(content=f"{prefix}\n{text}", is_error=True)
+    return ToolResult(content=f"ERROR: {message}\n{text}", is_error=True)
 
 
 @mcp.tool()
