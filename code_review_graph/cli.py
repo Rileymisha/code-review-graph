@@ -887,6 +887,22 @@ def main() -> None:
         help="External directory to store graph database (useful for network shares)"
     )
 
+    # ingest-commits — backfill git history as Commit nodes (Task 5)
+    ingest_commits_cmd = sub.add_parser(
+        "ingest-commits",
+        help="Backfill git commits into the graph (Commit nodes + modify-file edges)",
+    )
+    ingest_commits_cmd.add_argument(
+        "--branch",
+        default="HEAD",
+        help="Git ref to ingest from (default: HEAD — first-parent history)",
+    )
+    ingest_commits_cmd.add_argument(
+        "--repo-root",
+        default=".",
+        help="Repository root to read git history from (default: current directory)",
+    )
+
     # visualize
     vis_cmd = sub.add_parser("visualize", help="Generate interactive HTML graph visualization")
     vis_cmd.add_argument("--repo", default=None, help="Repository root (auto-detected)")
@@ -1575,13 +1591,17 @@ def main() -> None:
         print(result.get("summary", "Embedding done."))
         return
 
-    if args.command in ("update", "detect-changes"):
-        # update and detect-changes require git for diffing
-        repo_root = Path(args.repo) if args.repo else find_repo_root()
+    if args.command in ("update", "detect-changes", "ingest-commits"):
+        # update and detect-changes need git for diffing; ingest-commits needs
+        # git to walk history. Resolve via find_repo_root() so a missing VCS
+        # is reported with the same actionable error.
+        if args.command == "ingest-commits":
+            repo_root = Path(args.repo_root).resolve()
+        else:
+            repo_root = Path(args.repo) if args.repo else find_repo_root()
         if not repo_root:
             logging.error(
-                "Not in a git repository. '%s' requires git for diffing.",
-                args.command,
+                "Not in a git repository. '%s' requires git.", args.command,
             )
             logging.error("Use 'build' for a full parse, or run 'git init' first.")
             sys.exit(1)
@@ -1821,6 +1841,7 @@ def main() -> None:
                 print(f"Nodes: {stats.total_nodes}")
                 print(f"Edges: {stats.total_edges}")
                 print(f"Files: {stats.files_count}")
+                print(f"Commits: {store.commit_count()}")
                 print(f"Languages: {', '.join(stats.languages)}")
                 print(f"Last updated: {stats.last_updated or 'never'}")
                 if stored_branch:
@@ -1878,6 +1899,12 @@ def main() -> None:
                         f"\nForgot {len(targets)} file(s); "
                         f"{remaining} file(s) remain in the graph."
                     )
+
+        elif args.command == "ingest-commits":
+            from .commit_ingest import ingest_commits
+
+            n = ingest_commits(store, repo_root, branch=args.branch)
+            print(f"Ingested {n} commit(s) from {args.branch}")
 
         elif args.command == "watch":
             from .postprocessing import run_post_processing

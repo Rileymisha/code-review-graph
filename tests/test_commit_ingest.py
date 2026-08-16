@@ -1,4 +1,4 @@
-"""Tests for GraphStore commit-intent ingest interface (Task 2 + Task 3 + Task 4).
+"""Tests for GraphStore commit-intent ingest interface (Task 2 + Task 3 + Task 4 + Task 5).
 
 These tests exercise:
 * Task 2 — commit node CRUD + reverse/forward queries that ``GraphStore``
@@ -8,6 +8,8 @@ These tests exercise:
   against a real (tempdir) git repo.
 * Task 4 — ``full_build()`` triggers ``ingest_commits`` so commit nodes
   appear in the graph after a regular build runs.
+* Task 5 — CLI ``ingest-commits`` subcommand + ``status`` reports commit
+  count via ``cli.main()`` (argparse-driven, no shell-out).
 
 Notes for implementer (vs. brief):
 * ``GraphStore._conn`` is an attribute (sqlite3.Connection), not a callable.
@@ -23,7 +25,9 @@ Notes for implementer (vs. brief):
 from __future__ import annotations
 
 import subprocess
+import sys
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
@@ -230,3 +234,85 @@ def test_full_build_triggers_commit_ingest(tmp_path: Path) -> None:
         assert store.commit_count() >= 1
     finally:
         store.close()
+
+
+# ---------------------------------------------------------------------------
+# Task 5 — CLI ingest-commits subcommand + status reports commit count
+# ---------------------------------------------------------------------------
+
+
+def test_cli_ingest_commits_subcommand(tmp_path: Path, capsys) -> None:
+    """``code-review-graph ingest-commits --repo-root <repo>`` exits 0 and prints ``Ingested N commit(s)``.
+
+    Drives the full CLI dispatch via ``cli.main()`` so the test exercises
+    the real argparse wiring (subcommand registration, --repo-root default,
+    store init path). The repo is a real git repo with one commit; we
+    construct the ``GraphStore`` first so the DB exists by the time the
+    CLI tries to open it.
+    """
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    subprocess.run(["git", "init", "-q"], cwd=repo, check=True)
+    subprocess.run(
+        ["git", "config", "user.email", "t@e.com"], cwd=repo, check=True
+    )
+    subprocess.run(["git", "config", "user.name", "T"], cwd=repo, check=True)
+    (repo / "a.txt").write_text("x")
+    subprocess.run(["git", "add", "a.txt"], cwd=repo, check=True)
+    subprocess.run(["git", "commit", "-q", "-m", "first"], cwd=repo, check=True)
+
+    # Materialize the DB at the conventional layout before the CLI runs, so
+    # status / ingest both have a store to open.
+    db_path = repo / ".code-review-graph" / "graph.db"
+    GraphStore(db_path).close()
+
+    from code_review_graph import cli
+    argv = [
+        "code-review-graph",
+        "ingest-commits",
+        "--repo-root",
+        str(repo),
+    ]
+    with patch.object(sys, "argv", argv):
+        cli.main()  # must not raise — exit 0 means no SystemExit
+
+    out = capsys.readouterr().out
+    assert "Ingested 1 commit(s)" in out, out
+
+
+def test_cli_status_shows_commit_count(tmp_path: Path, capsys) -> None:
+    """``code-review-graph status`` prints a ``Commits: N`` line that matches ``store.commit_count()``.
+
+    Drives the status command via ``cli.main()`` and asserts the
+    human-readable output contains the new line. We seed the store
+    directly (one commit node) so the test is independent of the
+    ``ingest-commits`` subcommand.
+    """
+    repo = tmp_path / "repo"
+    repo.mkdir()
+
+    db_path = repo / ".code-review-graph" / "graph.db"
+    store = GraphStore(db_path)
+    try:
+        store.add_commit_node(
+            hash="c1",
+            author="r",
+            date="2026-08-16T00:00:00Z",
+            message="feat: seed",
+            branch="main",
+        )
+    finally:
+        store.close()
+
+    from code_review_graph import cli
+    argv = [
+        "code-review-graph",
+        "status",
+        "--repo",
+        str(repo),
+    ]
+    with patch.object(sys, "argv", argv):
+        cli.main()
+
+    out = capsys.readouterr().out
+    assert "Commits: 1" in out, out
