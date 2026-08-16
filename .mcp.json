@@ -3,6 +3,15 @@
     "code-review-graph": {
       "command": "uvx",
       "args": ["code-review-graph", "serve"]
+    },
+    "runner-mcp": {
+      "command": "/home/riley/workspace/code-review-graph/runner-mcp/.venv/bin/python",
+      "args": ["-m", "runner_mcp"],
+      "cwd": "/home/riley/workspace/code-review-graph/runner-mcp",
+      "env": {
+        "CRG_PROJECT_ROOT": "/home/riley/workspace/code-review-graph",
+        "PYTHONPATH": "/home/riley/workspace/code-review-graph/runner-mcp/src"
+      }
     }
   }
 }
