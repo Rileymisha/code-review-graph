@@ -12,7 +12,7 @@ from fastmcp.tools.tool import ToolResult
 from runner_mcp.config import load_targets
 from runner_mcp.runner import cleanup_stale_logs, run
 
-mcp = FastMCP("runner-mcp")
+mcp = FastMCP("crg-runner-mcp")
 
 
 def get_project_root() -> Path:

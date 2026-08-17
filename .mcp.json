@@ -4,20 +4,20 @@
       "command": "uvx",
       "args": ["code-review-graph", "serve"]
     },
-    "runner-mcp": {
+    "crg-runner-mcp": {
       "command": "./.venv/bin/python",
       "args": ["-m", "runner_mcp"],
-      "cwd": "/home/riley/workspace/code-review-graph/runner-mcp",
+      "cwd": "/home/riley/workspace/code-review-graph/crg-runner-mcp",
       "env": {
         "CRG_PROJECT_ROOT": "/home/riley/workspace/code-review-graph",
-        "PYTHONPATH": "/home/riley/workspace/code-review-graph/runner-mcp/src"
+        "PYTHONPATH": "/home/riley/workspace/code-review-graph/crg-runner-mcp/src"
       }
     },
-    "runtime-signals-mcp": {
+    "crg-runtime-signals-mcp": {
       "type": "stdio",
-      "command": "/home/riley/workspace/code-review-graph/runtime-signals-mcp/.venv/bin/python",
+      "command": "/home/riley/workspace/code-review-graph/crg-runtime-signals-mcp/.venv/bin/python",
       "args": ["-m", "runtime_signals_mcp"],
-      "cwd": "/home/riley/workspace/code-review-graph/runtime-signals-mcp"
+      "cwd": "/home/riley/workspace/code-review-graph/crg-runtime-signals-mcp"
     }
   }
 }

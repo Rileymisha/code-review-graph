@@ -239,3 +239,17 @@ wait for the user to name them.**
 - Cursor: `~/.cursor/mcp.json`
 - After editing either: fully restart the client process (not just close
   the window) before the new tools appear.
+
+## Server-key naming convention
+
+When a stdio MCP server is part of a larger project (e.g. `code-review-graph`),
+prefix the server key with the project abbrev so multiple projects can coexist
+without collisions in `~/.cursor/mcp.json` or `~/.claude/settings.json`:
+
+- `crg-runner-mcp` (not `runner-mcp`) — `crg-` distinguishes from generic `runner-mcp`
+- `crg-runtime-signals-mcp` (not `runtime-signals-mcp`)
+
+The directory name (`crg-runner-mcp/`) and `pyproject.toml` `name` field also
+use the `crg-` prefix. The Python **import path** (`from runner_mcp.server`)
+and the **package directory** (`src/runner_mcp/`) keep the original short name
+to minimize internal churn — only the wire-level MCP server key changes.

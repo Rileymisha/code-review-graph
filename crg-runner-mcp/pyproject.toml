@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "runner-mcp"
+name = "crg-runner-mcp"
 version = "0.1.0"
 description = "stdio MCP server exposing run_command and list_targets for code-review-graph"
 requires-python = ">=3.10"

@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "runtime-signals-mcp"
+name = "crg-runtime-signals-mcp"
 version = "0.1.0"
 description = "stdio MCP server exposing host runtime signals (log / process / py-spy profile)"
 requires-python = ">=3.10"

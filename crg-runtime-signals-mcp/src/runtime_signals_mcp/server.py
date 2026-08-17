@@ -21,7 +21,7 @@ from runtime_signals_mcp import profiler, signals
 
 logger = logging.getLogger(__name__)
 
-mcp = FastMCP("runtime-signals-mcp")
+mcp = FastMCP("crg-runtime-signals-mcp")
 
 
 def _err(message: str) -> ToolResult:
