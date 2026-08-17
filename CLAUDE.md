@@ -204,3 +204,38 @@ Fall back to Grep/Glob/Read **only** when the graph doesn't cover what you need.
 2. Use `detect_changes_tool` for code review.
 3. Use `get_affected_flows_tool` to understand impact.
 4. Use `query_graph_tool` pattern="tests_for" to check coverage.
+
+## MCP Tools: runner-mcp + runtime-signals-mcp (Riley's local harness)
+
+Two additional stdio MCP servers live in this repo (`runner-mcp/` and
+`runtime-signals-mcp/`). They are registered in both `.mcp.json` (Claude
+Code) and `~/.cursor/mcp.json` (Cursor). **Use them automatically — do not
+wait for the user to name them.**
+
+### When to use `mcp__runner_mcp__*` automatically
+
+- **After editing any code**: run `run_command(cmd="pytest -q")` (or the
+  focused test file) to verify before declaring work done. Never claim a
+  change works without running the relevant test through runner-mcp.
+- **Before finishing a task**: `list_targets()` shows what's available
+  (test / lint / format / type-check / build); run at least `test` and
+  `lint` targets before merge-level claims.
+- Timeout: use `timeout_s=300` for full-suite pytest runs (the default 120s
+  is often too short for this repo's ~2400 tests).
+
+### When to use `mcp__runtime_signals_mcp__*` automatically
+
+- **Debugging failures**: `read_log` on `/tmp` or `/var/log` files that
+  pytest / subprocess writes produce; `list_signals(kind="process")` to see
+  what's running.
+- **Performance work**: `profile_python(pid, duration_s=5)` after
+  `list_signals` identifies a Python process to sample.
+- `py-spy` may be missing → the tool returns a friendly isError; that is
+  expected, not a defect.
+
+### Registration locations (for reference)
+
+- Claude Code: `.mcp.json` in this repo
+- Cursor: `~/.cursor/mcp.json`
+- After editing either: fully restart the client process (not just close
+  the window) before the new tools appear.
