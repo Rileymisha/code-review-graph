@@ -15,7 +15,7 @@ pytestmark = pytest.mark.asyncio
 
 async def _call(tool: str, args: dict, monkeypatch: pytest.MonkeyPatch) -> tuple[bool, dict | str, str | None]:
     """Call a tool in-process; return (is_error, payload, subprocess cmd)."""
-    monkeypatch.setenv("OPENWEBUI_SMART_KEY", "k")
+    monkeypatch.setenv("CRG_SMART_LLM_KEY", "k")
     fake_resp = mock.Mock()
     fake_resp.status = 200
     fake_resp.read.return_value = json.dumps({"choices": [{"message": {"content": "summary-text"}}]}).encode()
@@ -54,7 +54,7 @@ async def test_smart_run_test_uses_pytest(monkeypatch: pytest.MonkeyPatch) -> No
     assert is_err is False
     # Verify the captured command was "pytest -q"
     # (We mocked create_subprocess_exec, so args[2] is whatever run_command was called with)
-    assert cmd == "pytest -q"
+    assert cmd.endswith(" -m pytest -q") and cmd.startswith(".venv/bin/python")
     assert "summary" in payload
 
 

@@ -12,9 +12,9 @@ stdio MCP server: crg-runner-mcp / crg-runtime-signals-mcp results with LLM inte
 
 | Var | 必填 | 默认 |
 |---|---|---|
-| OPENWEBUI_SMART_KEY | ✅ | shell `export`;`.mcp.json` 用 `${...}` 占位 |
-| OPENWEBUI_BASE_URL | ❌ | http://localhost:3000 |
-| OPENWEBUI_MODEL | ❌ | minimax |
+| CRG_SMART_LLM_KEY | ✅ | shell `export`;`.mcp.json` 用 `${...}` 占位 |
+| CRG_SMART_LLM_BASE_URL | ❌ | https://api.deepseek.com/v1 |
+| CRG_SMART_LLM_MODEL | ❌ | deepseek-chat |
 
 ## 安装
 

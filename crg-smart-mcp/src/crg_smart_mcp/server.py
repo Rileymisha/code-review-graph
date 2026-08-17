@@ -8,7 +8,7 @@ from pathlib import Path
 from fastmcp import FastMCP
 from fastmcp.tools.base import ToolResult
 
-from crg_smart_mcp.llm import SYSTEM_INTERPRET, summarize_with_llm
+from crg_smart_mcp.llm import DEFAULT_MODEL, SYSTEM_INTERPRET, summarize_with_llm
 from crg_smart_mcp.runner import run_command
 
 mcp = FastMCP("crg-smart-mcp")
@@ -23,7 +23,7 @@ def _ok(payload: dict) -> str:
 async def _interpret_with_llm(raw_text: str, system_hint: str) -> tuple[str | None, str | None]:
     """Returns (summary, model_name). summary=None means LLM unreachable."""
     import os
-    model = os.environ.get("OPENWEBUI_MODEL")
+    model = os.environ.get("CRG_SMART_LLM_MODEL") or DEFAULT_MODEL
 
     def _do() -> str | None:
         return summarize_with_llm(
@@ -81,7 +81,7 @@ async def smart_run_test(timeout_s: int = 120) -> str:
         JSON string with {raw: pytest stdout/stderr/exit_code, summary: <failure-cause explanation>, model}
     """
     try:
-        result = await run_command("pytest -q", Path.cwd(), timeout_s=timeout_s, log_dir=LOG_DIR)
+        result = await run_command(".venv/bin/python -m pytest -q", Path.cwd(), timeout_s=timeout_s, log_dir=LOG_DIR)
     except Exception as e:
         return ToolResult(
             content=f"ERROR: smart_run_test failed at runner: {type(e).__name__}: {e}",

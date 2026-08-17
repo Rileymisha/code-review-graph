@@ -1,4 +1,4 @@
-"""Open WebUI chat completions client (stdlib urllib, no deps)."""
+"""OpenAI-compatible chat completions client (stdlib urllib, no deps). DeepSeek by default."""
 from __future__ import annotations
 
 import json
@@ -6,8 +6,8 @@ import os
 import urllib.error
 import urllib.request
 
-DEFAULT_BASE_URL = "http://localhost:3000"
-DEFAULT_MODEL = "minimax"
+DEFAULT_BASE_URL = "https://api.deepseek.com/v1"
+DEFAULT_MODEL = "deepseek-chat"
 DEFAULT_TIMEOUT_S = 30
 
 SYSTEM_INTERPRET = "你是 shell 输出解读助手。只基于用户给你的数据描述,不要臆测。用 1-2 句话总结。"
@@ -23,11 +23,11 @@ def summarize_with_llm(
     timeout_s: int = DEFAULT_TIMEOUT_S,
 ) -> str | None:
     """POST Open WebUI /api/chat/completions; return assistant content, or None on any failure."""
-    key = api_key or os.environ.get("OPENWEBUI_SMART_KEY")
+    key = api_key or os.environ.get("CRG_SMART_LLM_KEY")
     if not key:
         return None
-    url = (base_url or os.environ.get("OPENWEBUI_BASE_URL") or DEFAULT_BASE_URL).rstrip("/")
-    chosen_model = model or os.environ.get("OPENWEBUI_MODEL") or DEFAULT_MODEL
+    url = (base_url or os.environ.get("CRG_SMART_LLM_BASE_URL") or DEFAULT_BASE_URL).rstrip("/")
+    chosen_model = model or os.environ.get("CRG_SMART_LLM_MODEL") or DEFAULT_MODEL
     payload = {
         "model": chosen_model,
         "messages": [
@@ -37,7 +37,7 @@ def summarize_with_llm(
         "stream": False,
     }
     req = urllib.request.Request(
-        f"{url}/api/chat/completions",
+        f"{url}/chat/completions",
         data=json.dumps(payload).encode("utf-8"),
         headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
         method="POST",

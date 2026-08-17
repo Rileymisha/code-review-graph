@@ -25,7 +25,7 @@
       "args": ["-m", "crg_smart_mcp"],
       "cwd": "/home/riley/workspace/code-review-graph/crg-smart-mcp",
       "env": {
-        "OPENWEBUI_SMART_KEY": "${OPENWEBUI_SMART_KEY}"
+        "CRG_SMART_LLM_KEY": "${CRG_SMART_LLM_KEY}"
       }
     }
   }
