@@ -18,6 +18,15 @@
       "command": "/home/riley/workspace/code-review-graph/crg-runtime-signals-mcp/.venv/bin/python",
       "args": ["-m", "runtime_signals_mcp"],
       "cwd": "/home/riley/workspace/code-review-graph/crg-runtime-signals-mcp"
+    },
+    "crg-smart-mcp": {
+      "type": "stdio",
+      "command": "/home/riley/workspace/code-review-graph/crg-smart-mcp/.venv/bin/python",
+      "args": ["-m", "crg_smart_mcp"],
+      "cwd": "/home/riley/workspace/code-review-graph/crg-smart-mcp",
+      "env": {
+        "OPENWEBUI_SMART_KEY": "${OPENWEBUI_SMART_KEY}"
+      }
     }
   }
 }

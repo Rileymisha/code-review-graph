@@ -5,3 +5,5 @@ __pycache__/
 dist/
 build/
 .venv/
+# Runtime logs written cwd-relative by server.py (LOG_DIR)
+.crg-smart-mcp-logs/

@@ -240,6 +240,16 @@ wait for the user to name them.**
 - After editing either: fully restart the client process (not just close
   the window) before the new tools appear.
 
+## MCP: crg-smart-mcp 何时自动用
+
+智能解读场景(agent 自己读 raw 数据累)用 `mcp__crg-smart-mcp__*`:
+
+- "跑 test 看错在哪" → `smart_run_test()`
+- "我系统上跑着啥" → `smart_list_signals(kind="process")`
+- "跑 X 命令后告诉我结果" → `smart_run(cmd="X")`
+
+底层 `mcp__crg-runner-mcp__*` / `mcp__crg-runtime-signals-mcp__*` 仍可用(返回 raw 无 LLM),当 agent 只要数据不要解读时用。
+
 ## Server-key naming convention
 
 When a stdio MCP server is part of a larger project (e.g. `code-review-graph`),
