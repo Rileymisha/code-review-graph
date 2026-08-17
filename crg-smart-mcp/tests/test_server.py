@@ -13,32 +13,6 @@ from crg_smart_mcp.server import mcp
 pytestmark = pytest.mark.asyncio
 
 
-def _payload_from_text(text: str) -> dict | str:
-    """FastMCP 3.x wraps a list[dict] tool result as JSON of a content-block list.
-
-    With fastmcp 3.4.7, content[0].text is the JSON-serialized content list
-    (e.g. '[{"type":"text","text":"{...payload...}"}]'), so unwrap the inner
-    text before parsing. If the text is already the payload JSON (older/newer
-    fastmcp wrapping), return it as-is.
-    """
-    try:
-        parsed = json.loads(text)
-    except json.JSONDecodeError:
-        return text
-    if (
-        isinstance(parsed, list)
-        and len(parsed) == 1
-        and isinstance(parsed[0], dict)
-        and "text" in parsed[0]
-    ):
-        inner = parsed[0]["text"]
-        try:
-            return json.loads(inner)
-        except json.JSONDecodeError:
-            return inner
-    return parsed
-
-
 async def _call(tool: str, args: dict, monkeypatch: pytest.MonkeyPatch) -> tuple[bool, dict | str, str | None]:
     """Call a tool in-process; return (is_error, payload, subprocess cmd)."""
     monkeypatch.setenv("OPENWEBUI_SMART_KEY", "k")
@@ -63,7 +37,8 @@ async def _call(tool: str, args: dict, monkeypatch: pytest.MonkeyPatch) -> tuple
     text = result.content[0].text if result.content else ""
     if is_err:
         return True, text, cmd
-    return False, _payload_from_text(text), cmd
+    # Tools return a single JSON string (str), so one json.loads must yield the payload dict.
+    return False, json.loads(text), cmd
 
 
 async def test_smart_run_happy(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -16,8 +16,8 @@ mcp = FastMCP("crg-smart-mcp")
 LOG_DIR = Path(".crg-smart-mcp-logs")
 
 
-def _ok(payload: dict) -> list[dict]:
-    return [{"type": "text", "text": json.dumps(payload, ensure_ascii=False, default=str)}]
+def _ok(payload: dict) -> str:
+    return json.dumps(payload, ensure_ascii=False, default=str)
 
 
 async def _interpret_with_llm(raw_text: str, system_hint: str) -> tuple[str | None, str | None]:
@@ -37,7 +37,7 @@ async def _interpret_with_llm(raw_text: str, system_hint: str) -> tuple[str | No
 
 
 @mcp.tool()
-async def smart_run(cmd: str, timeout_s: int = 120) -> list[dict]:
+async def smart_run(cmd: str, timeout_s: int = 120) -> str:
     """Run a shell command and get a human-readable summary.
 
     Args:
@@ -45,9 +45,10 @@ async def smart_run(cmd: str, timeout_s: int = 120) -> list[dict]:
         timeout_s: Max runtime in seconds (default 120, recommended ≤ 300).
 
     Returns:
-        {raw: {exit_code, stdout, stderr, duration_ms, truncated, log_file},
-         summary: <LLM-interpreted string or null>,
-         model: <model name or null>}
+        JSON string with {raw, summary, model}:
+        raw: {exit_code, stdout, stderr, duration_ms, truncated, log_file},
+        summary: <LLM-interpreted string or null>,
+        model: <model name or null>
     """
     try:
         result = await run_command(cmd, Path.cwd(), timeout_s=timeout_s, log_dir=LOG_DIR)
@@ -73,8 +74,12 @@ async def smart_run(cmd: str, timeout_s: int = 120) -> list[dict]:
 
 
 @mcp.tool()
-async def smart_run_test(timeout_s: int = 120) -> list[dict]:
-    """Run `pytest -q` and summarize failures via LLM."""
+async def smart_run_test(timeout_s: int = 120) -> str:
+    """Run `pytest -q` and summarize failures via LLM.
+
+    Returns:
+        JSON string with {raw: pytest stdout/stderr/exit_code, summary: <failure-cause explanation>, model}
+    """
     try:
         result = await run_command("pytest -q", Path.cwd(), timeout_s=timeout_s, log_dir=LOG_DIR)
     except Exception as e:
@@ -98,14 +103,14 @@ async def smart_run_test(timeout_s: int = 120) -> list[dict]:
 
 
 @mcp.tool()
-async def smart_list_signals(kind: str | None = None) -> list[dict]:
+async def smart_list_signals(kind: str | None = None) -> str:
     """List runtime signals (logs / processes) with LLM categorization.
 
     Args:
         kind: 'log' | 'process' | None (= both). Mirrors crg-runtime-signals-mcp.
 
     Returns:
-        {raw: <list of items>, summary: <categorized human-readable description>}
+        JSON string with {raw: <list of items>, summary: <categorized human-readable description>, model}
     """
     # We don't have a direct crg-runtime-signals-mcp call here (avoid MCP stdio nesting).
     # Instead: shell out to `ps` / glob log files directly.
