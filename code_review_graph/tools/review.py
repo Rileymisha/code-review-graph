@@ -478,3 +478,106 @@ def detect_changes_func(
         return {"status": "error", "error": str(exc)}
     finally:
         store.close()
+
+
+# ---------------------------------------------------------------------------
+# Tool 31: review_pr (one-shot review brief)
+# ---------------------------------------------------------------------------
+
+
+def review_pr_func(
+    base: str = "HEAD~1",
+    changed_files: list[str] | None = None,
+    repo_root: str | None = None,
+    include_source: bool = False,
+    max_depth: int = 2,
+) -> dict[str, Any]:
+    """One-shot review brief: chains the review workflow into one call.
+
+    Replaces the manual multi-tool chain (detect_changes -> impact_radius ->
+    affected_flows -> review_context -> suggested_questions) with a single
+    compact call.  Impact radius is already embedded in detect_changes and
+    review_context, so this runs 4 internal calls, not 5.
+
+    All internal calls use ``detail_level="minimal"`` and top-5 caps so the
+    default response stays well under 2k tokens.
+
+    Args:
+        base: Git ref to diff against (default: HEAD~1).
+        changed_files: Explicit list of changed files (relative to repo root).
+            Auto-detected from git diff if omitted.
+        repo_root: Repository root path. Auto-detected if omitted.
+        include_source: If True, include source snippets for changed
+            functions. Default: False.
+        max_depth: Impact radius depth. Default: 2.
+
+    Returns:
+        Compact review brief: summary, risk score, review priorities,
+        affected flows, key entities, test gaps, suggested questions.
+    """
+    store, root = _get_store(repo_root)
+    try:
+        if changed_files is None:
+            changed_files = get_changed_files(root, base)
+            if not changed_files:
+                changed_files = get_staged_and_unstaged(root)
+
+        if not changed_files:
+            return {
+                "status": "ok",
+                "summary": "No changes detected. Nothing to review.",
+            }
+
+        # Lazy import avoids a tools-package import cycle.
+        from .analysis_tools import get_suggested_questions_func
+
+        detect = detect_changes_func(
+            base=base,
+            changed_files=changed_files,
+            include_source=include_source,
+            max_depth=max_depth,
+            repo_root=root,
+            detail_level="minimal",
+        )
+        if detect.get("status") == "error":
+            return detect
+
+        flows = get_affected_flows_func(
+            changed_files=changed_files, base=base, repo_root=root
+        )
+        context = get_review_context(
+            changed_files=changed_files,
+            max_depth=max_depth,
+            include_source=include_source,
+            repo_root=root,
+            base=base,
+            detail_level="minimal",
+        )
+        questions = get_suggested_questions_func(repo_root=root)
+
+        brief: dict[str, Any] = {
+            "status": "ok",
+            "summary": detect.get("summary", ""),
+            "risk_score": detect.get("risk_score"),
+            "risk": context.get("risk"),
+            "changed_file_count": len(changed_files),
+            "test_gap_count": detect.get("test_gap_count"),
+            "review_priorities": detect.get("review_priorities", [])[:5],
+            "affected_flows": [
+                {
+                    "name": f.get("name"),
+                    "criticality": f.get("criticality"),
+                }
+                for f in flows.get("affected_flows", [])[:5]
+            ],
+            "flow_count": flows.get("total"),
+            "key_entities": context.get("key_entities", []),
+            "suggested_questions": [
+                q["question"] for q in questions.get("questions", [])
+            ][:5],
+        }
+        return brief
+    except Exception as exc:
+        return {"status": "error", "error": str(exc)}
+    finally:
+        store.close()

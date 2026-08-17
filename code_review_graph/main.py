@@ -57,6 +57,7 @@ from .tools import (
     list_repos_func,
     query_graph,
     refactor_func,
+    review_pr_func,
     run_postprocess,
     semantic_search_nodes,
     traverse_graph_func,
@@ -289,26 +290,30 @@ def query_graph_tool(
 def get_review_context_tool(
     changed_files: Optional[list[str]] = None,
     max_depth: int = 2,
-    include_source: bool = True,
+    include_source: bool = False,
     max_lines_per_file: int = 200,
     repo_root: Optional[str] = None,
     base: str = "HEAD~1",
-    detail_level: str = "standard",
+    detail_level: str = "minimal",
 ) -> dict:
     """Generate a focused, token-efficient review context for code changes.
 
     Combines impact analysis with source snippets and review guidance.
     Use this for comprehensive code reviews.
 
+    Defaults favor token efficiency: ``include_source=False`` and
+    ``detail_level="minimal"``. Pass ``include_source=True`` explicitly
+    when source snippets are needed.
+
     Args:
         changed_files: Files to review. Auto-detected from git diff if omitted.
         max_depth: Impact radius depth. Default: 2.
-        include_source: Include source code snippets. Default: True.
+        include_source: Include source code snippets. Default: False.
         max_lines_per_file: Max source lines per file. Default: 200.
         repo_root: Repository root path. Auto-detected if omitted.
         base: Git ref for change detection. Default: HEAD~1.
         detail_level: "standard" for full output, "minimal" for
-            token-efficient summary. Default: standard.
+            token-efficient summary. Default: minimal.
     """
     root = _resolve_repo_root(repo_root)
     return with_provenance(get_review_context(
@@ -901,6 +906,44 @@ def get_suggested_questions_tool(
     return with_provenance(get_suggested_questions_func(
         repo_root=root,
     ), root)
+
+
+@mcp.tool()
+def review_pr_tool(
+    base: str = "HEAD~1",
+    changed_files: Optional[list[str]] = None,
+    repo_root: Optional[str] = None,
+    include_source: bool = False,
+    max_depth: int = 2,
+) -> dict:
+    """One-shot review brief: chains the full review workflow into one call.
+
+    Replaces the manual multi-tool review chain (detect_changes ->
+    get_impact_radius -> get_affected_flows -> get_review_context ->
+    get_suggested_questions) with a single compact call.  All internal
+    calls use detail_level="minimal" and top-5 caps, so the default
+    response stays well under 2k tokens.
+
+    Use this for a quick pre-commit/PR review; drill into specific tools
+    only for high-risk items it flags.
+
+    Args:
+        base: Git ref to diff against. Default: HEAD~1.
+        changed_files: Explicit list of changed files (relative to repo
+            root). Auto-detected from git diff if omitted.
+        repo_root: Repository root path. Auto-detected if omitted.
+        include_source: Include source snippets for changed functions.
+            Default: False.
+        max_depth: Impact radius depth. Default: 2.
+    """
+    root = _resolve_repo_root(repo_root)
+    return review_pr_func(
+        base=base,
+        changed_files=changed_files,
+        repo_root=root,
+        include_source=include_source,
+        max_depth=max_depth,
+    )
 
 
 @mcp.tool()

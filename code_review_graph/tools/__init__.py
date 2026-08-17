@@ -101,6 +101,7 @@ from .review import (
     detect_changes_func,
     get_affected_flows_func,
     get_review_context,
+    review_pr_func,
 )
 
 __all__ = [
@@ -143,6 +144,7 @@ __all__ = [
     "detect_changes_func",
     "get_affected_flows_func",
     "get_review_context",
+    "review_pr_func",
     # analysis_tools
     "get_bridge_nodes_func",
     "get_hub_nodes_func",

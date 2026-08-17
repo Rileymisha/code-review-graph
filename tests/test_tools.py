@@ -28,6 +28,7 @@ from code_review_graph.tools import (
     list_flows,
     list_graph_stats,
     query_graph,
+    review_pr_func,
 )
 
 
@@ -575,6 +576,31 @@ class TestGraphPathResolution:
             "saved_tokens",
             "saved_percent",
         }
+
+    def test_review_pr_func_returns_compact_brief(self, tmp_path):
+        repo = tmp_path / "fixtures" / "sample_repo"
+        repo.mkdir(parents=True)
+        (repo / ".git").mkdir()
+        (repo / "src").mkdir()
+        (repo / "src" / "app.py").write_text(
+            "def handle():\n    return 'ok'\n" + ("# padding\n" * 500),
+            encoding="utf-8",
+        )
+        _seed_repo_relative_graph(repo)
+
+        brief = review_pr_func(
+            changed_files=["src/app.py"],
+            repo_root=str(repo),
+        )
+
+        assert brief["status"] == "ok"
+        assert brief["changed_file_count"] == 1
+        assert "summary" in brief and brief["summary"]
+        assert "risk_score" in brief
+        # compact caps
+        assert len(brief["review_priorities"]) <= 5
+        assert len(brief["affected_flows"]) <= 5
+        assert len(brief["suggested_questions"]) <= 5
 
     def test_get_impact_radius_resolves_repo_relative_changed_file(self, tmp_path):
         repo = tmp_path / "fixtures" / "sample_repo"

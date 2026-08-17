@@ -179,7 +179,7 @@ scanning cannot.
 
 - **Exploring code**: `semantic_search_nodes_tool` or `query_graph_tool` instead of Grep
 - **Understanding impact**: `get_impact_radius_tool` instead of manually tracing imports
-- **Code review**: `detect_changes_tool` + `get_review_context_tool` instead of reading entire files
+- **Code review**: `review_pr_tool` (one-shot brief) first; `detect_changes_tool` / `get_review_context_tool` for drilling into high-risk items, instead of reading entire files
 - **Finding relationships**: `query_graph_tool` with callers_of/callees_of/imports_of/tests_for
 - **Architecture questions**: `get_architecture_overview_tool` + `list_communities_tool`
 
@@ -189,6 +189,7 @@ Fall back to Grep/Glob/Read **only** when the graph doesn't cover what you need.
 
 | Tool | Use when |
 |------|----------|
+| `review_pr_tool` | One-shot pre-commit/PR review brief — compact summary, risk, priorities, test gaps |
 | `detect_changes_tool` | Reviewing code changes — gives risk-scored analysis |
 | `get_review_context_tool` | Need source snippets for review — token-efficient |
 | `get_impact_radius_tool` | Understanding blast radius of a change |
@@ -201,7 +202,7 @@ Fall back to Grep/Glob/Read **only** when the graph doesn't cover what you need.
 ### Workflow
 
 1. The graph auto-updates on file changes (via hooks).
-2. Use `detect_changes_tool` for code review.
+2. Use `review_pr_tool` for one-shot code review; drill into `detect_changes_tool` on high-risk items.
 3. Use `get_affected_flows_tool` to understand impact.
 4. Use `query_graph_tool` pattern="tests_for" to check coverage.
 
